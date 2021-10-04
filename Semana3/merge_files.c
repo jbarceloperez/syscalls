@@ -5,23 +5,58 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define DEFAULT_BUFSIZE 1024
+#define DEFAULT_BUFSIZE 1024    // tamaño del buffer por defecto
 
 
-void merge(){
+// void merge(int bufsize, int entradas, char *argv){
 
-}
+//     char *bufout;
+//     char **bufin;
+
+//     // Reserva memoria dinámica para buffer de salida
+//     if ((bufout = (char *) malloc(bufsize * sizeof(char))) == NULL)
+//     {
+//         perror("malloc()");
+//         exit(EXIT_FAILURE);
+//     }
+//     //se crean tantos descriptores como ficheros de entrada haya
+//     int *descriptores = malloc(entradas * sizeof(int));
+
+//     // reservar memoria para que haya un buffer de lectura por cada fichero de entrada abierto
+//     bufin = malloc(entradas * sizeof(char*));
+
+
+//     //abrir los ficheros de entrada e inicializar los bufferes correspondientes a cada fichero de entrada
+//     for (int i = 0; i < entradas; i++)
+//     {
+//         descriptores[i] = open(argv[i+optind], O_RDONLY);
+//         if (descriptores[i]==-1)
+//         {
+//             perror("open(filein)");
+//             exit(EXIT_FAILURE);
+//         }
+
+//         bufin[i] = malloc(bufsize * sizeof(char));  // reservar la memoria para el buffer de lectura del fichero i
+//     }
+    
+    
+
+    
+//     for (int i = 0; i < entradas; i++) free(bufin[i]);  // primero libera todos los bufferes correspondientes a ficheros de entrada
+//     free(bufin);    //despues libera el array de bufferes
+//     free(descriptores); //libera la memoria del array de descriptores
+//     free(bufout);   //libera la memoria del buffer de salida
+
+// }
 
 
 
 int main(int argc, char *argv[])
 {
-    int opt, bufsize, fdout;
-    char *fileout;
+    int opt, bufsize = DEFAULT_BUFSIZE, fdout;
+    char *fileout = NULL;
     char *bufout;
     char **bufin;
-
-    bufsize = DEFAULT_BUFSIZE;  // tamaño del buffer por defecto
 
     if (argc < 2){ // si no hay argumentos
         fprintf(stderr, "Uso: %s [-t BUFSIZE] [-o FILEOUT] FILEIN1 [FILEIN2 ... FILEIN16]\nNo admite lectura de la entrada estandar.\n -t BUFSIZE  Tamaño de buffer donde 1 <= BUFSIZE <= 128MB\n -o FILEOUT  Usa FILEOUT en lugar de la salida estandar\n", argv[0]);
@@ -85,6 +120,9 @@ int main(int argc, char *argv[])
     
     // EJECUCIÓN - TENEMOS AL MENOS UN FICHERO DEL CUAL LEER
     
+    //merge(bufsize, entradas, argv);
+
+
     /* Reserva memoria dinámica para buffer de salida */
     if ((bufout = (char *) malloc(bufsize * sizeof(char))) == NULL)
     {
@@ -95,9 +133,10 @@ int main(int argc, char *argv[])
     int *descriptores = malloc(entradas * sizeof(int));
 
     // reservar memoria para que haya un buffer de lectura por cada fichero de entrada abierto
-    //bufin = malloc()
+    bufin = malloc(entradas * sizeof(char*));
 
-    //abrir los ficheros de entrada
+
+    //abrir los ficheros de entrada e inicializar los bufferes correspondientes a cada fichero de entrada
     for (int i = 0; i < entradas; i++)
     {
         descriptores[i] = open(argv[i+optind], O_RDONLY);
@@ -106,12 +145,43 @@ int main(int argc, char *argv[])
             perror("open(filein)");
             exit(EXIT_FAILURE);
         }
+
+        bufin[i] = malloc(bufsize * sizeof(char));  // reservar la memoria para el buffer de lectura del fichero i
+    }
+    
+    int *escribiendo = calloc(entradas, sizeof(int));
+    ssize_t *numread = calloc(entradas, sizeof(ssize_t));
+    ssize_t *numwritten = calloc(entradas, sizeof(ssize_t));
+    //al lio
+    while (1)
+    {
+        for (int i = 0; i < entradas; i++)  //primero se hace una lectura de tamaño bufsize de cada fichero si es necesario
+        {
+            if(!escribiendo[i]) // si escribiendo es 1 es que aun queda información en el buffer de la lectura anterior
+            {   //se almacena el no. de bytes leidos para cada fichero
+                numread[i] = read(descriptores[i], bufin[i], bufsize);
+                escribiendo[i] = 1;
+                if (numread[i]==-1)
+                {
+                    perror("read(fdin)");
+                    exit(EXIT_FAILURE);
+                }
+            }
+        }
+
+        for (int i = 0; i < entradas; i++)  //despues escribimos un byte de cada fichero en la salida
+        {
+
+        }
     }
     
 
     
-    
-
+    //liberar memoria
+    free(numread);
+    free(escribiendo);
+    for (int i = 0; i < entradas; i++) free(bufin[i]);  // primero libera todos los bufferes correspondientes a ficheros de entrada
+    free(bufin);    //despues libera el array de bufferes
     free(descriptores); //libera la memoria del array de descriptores
     free(bufout);   //libera la memoria del buffer de salida
 

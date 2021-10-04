@@ -31,7 +31,7 @@ void catfd(int fdin, int fdout, char *buf, unsigned buf_size)
     while ((num_read = read(fdin, buf, buf_size)) > 0)
     {
         num_left = num_read;
-        buf_left=buf;
+        buf_left = buf;
         // ESCRITURAS PARCIALES -> en caso de que se escriba menos de lo que el buffer tiene,llevamos un contador de qué lleva escrito y se vuelve a escribir lo que queda.
         while((num_left) > 0 && ((num_written = write(fdout, buf_left, num_left)) > 0))
         {                                                                                               
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
         perror("malloc()");
         exit(EXIT_FAILURE);
     }
-
+/*
     int fderror;
     if (fderror = open("error.log", O_WRONLY | O_CREAT |  O_TRUNC, S_IRUSR | S_IWUSR) == -1)
     {
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     }
 
     fprintf(stderr, "Salida de error 1\n");
-    write(STDERR_FILENO, "Salida de error 2\n", strlen("Salida de error\n"));
+    write(STDERR_FILENO, "Salida de error 2\n", strlen("Salida de error\n"));*/
 
     /* Abre cada fichero de entrada y lo escribe en 'fileout' */
     if (optind < argc)
