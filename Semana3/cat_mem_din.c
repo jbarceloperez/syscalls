@@ -36,7 +36,7 @@ void catfd(int fdin, int fdout, char *buf, unsigned buf_size)
         while((num_left) > 0 && ((num_written = write(fdout, buf_left, num_left)) > 0))
         {                                                                                               
             //num_written_tot += num_written;
-            num_left=num_read-num_written;
+            num_left = num_read-num_written;
             buf_left += num_written;
         }
         if (num_written == -1)
