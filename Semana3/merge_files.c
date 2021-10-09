@@ -49,7 +49,12 @@
 
 // }
 
-
+int fin_all(int entradas, int *terminado)   //devuelve verdadero cuando todos los ficheros de lectura han sido leidos
+{
+    for (int i = 0; i < entradas; i++)
+        if (terminado[i] == 0) return 0;
+    return 1;
+}
 
 int main(int argc, char *argv[])
 {
@@ -130,10 +135,19 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     //se crean tantos descriptores como ficheros de entrada haya
-    int *descriptores = malloc(entradas * sizeof(int));
+    int *descriptores;
+    if ((descriptores = malloc(entradas * sizeof(int))) == NULL)
+    {
+        perror("malloc()");
+        exit(EXIT_FAILURE);
+    }
 
     // reservar memoria para que haya un buffer de lectura por cada fichero de entrada abierto
-    bufin = malloc(entradas * sizeof(char*));
+    if ((bufin = malloc(entradas * sizeof(char*))) == NULL)
+    {
+        perror("malloc()");
+        exit(EXIT_FAILURE);
+    }
 
 
     //abrir los ficheros de entrada e inicializar los bufferes correspondientes a cada fichero de entrada
@@ -149,37 +163,59 @@ int main(int argc, char *argv[])
         bufin[i] = malloc(bufsize * sizeof(char));  // reservar la memoria para el buffer de lectura del fichero i
     }
     
-    int *escribiendo = calloc(entradas, sizeof(int));
-    ssize_t *numread = calloc(entradas, sizeof(ssize_t));
+    int *terminado = calloc(entradas, sizeof(int));
+    ssize_t *numleft = calloc(entradas, sizeof(ssize_t));
     ssize_t *numwritten = calloc(entradas, sizeof(ssize_t));
+
     //al lio
-    while (1)
+    while (fin_all(entradas,terminado))
     {
-        for (int i = 0; i < entradas; i++)  //primero se hace una lectura de tamaño bufsize de cada fichero si es necesario
+        for (int i = 0; i < entradas; i++)
         {
-            if(!escribiendo[i]) // si escribiendo es 1 es que aun queda información en el buffer de la lectura anterior
-            {   //se almacena el no. de bytes leidos para cada fichero
-                numread[i] = read(descriptores[i], bufin[i], bufsize);
-                escribiendo[i] = 1;
-                if (numread[i]==-1)
+            if(!terminado[i])   //se revisa si el fichero está ya leído al completo
+            {
+                numleft[i] = read(descriptores[i], bufin[i], bufsize);  //guardamos el número de bytes leídos de este fichero, que serán los que habrá que escribir exactamente en el bufer de escritura (para tratar posibles escrituras parciales)
+                if (numleft[i]==0)  // tratar los casos en los que el fichero acaba, cerrando el desriptor y marcando que el fichero ya no debe volver a leerse.
                 {
-                    perror("read(fdin)");
-                    exit(EXIT_FAILURE);
+                    terminado[i] = 1;
+                    if (close(descriptores[i]) == -1)
+                    {
+                        perror("close(fdin)");
+                        exit(EXIT_FAILURE);
+                    }
                 }
             }
         }
+        //ahora las escrituras
+        //merge_files()
 
-        for (int i = 0; i < entradas; i++)  //despues escribimos un byte de cada fichero en la salida
-        {
 
-        }
+        // for (int i = 0; i < entradas; i++)  //primero se hace una lectura de tamaño bufsize de cada fichero si es necesario
+        // {
+        //     if(!escribiendo[i]) // si escribiendo es 1 es que aun queda información en el buffer de la lectura anterior
+        //     {   //se almacena el no. de bytes leidos para cada fichero
+        //         numread[i] = read(descriptores[i], bufin[i], bufsize);
+        //         escribiendo[i] = 1;
+        //         if (numread[i]==-1)
+        //         {
+        //             perror("read(fdin)");
+        //             exit(EXIT_FAILURE);
+        //         }
+        //     }
+        // }
+
+        // for (int i = 0; i < entradas; i++)  //despues escribimos un byte de cada fichero en la salida
+        // {
+
+        // }
     }
     
 
     
     //liberar memoria
-    free(numread);
-    free(escribiendo);
+    free(numwritten);
+    free(numleft);
+    free(terminado);
     for (int i = 0; i < entradas; i++) free(bufin[i]);  // primero libera todos los bufferes correspondientes a ficheros de entrada
     free(bufin);    //despues libera el array de bufferes
     free(descriptores); //libera la memoria del array de descriptores
