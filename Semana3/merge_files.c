@@ -7,7 +7,6 @@
 
 #define DEFAULT_BUFSIZE 1024    // tamaño del buffer por defecto
 
-
 int fin_all(int entradas, int *terminado)   //devuelve verdadero cuando todos los ficheros de lectura han sido leidos
 {
     for (int i = 0; i < entradas; i++)
@@ -28,6 +27,7 @@ int main(int argc, char *argv[])
     char *fileout = NULL;
     char *bufout;
     char **bufin;
+    int *descriptores;
 
     if (argc < 2){ // si no hay argumentos
         fprintf(stderr, "No hay ficheros de entrada\n");
@@ -99,7 +99,6 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     //se crean tantos descriptores como ficheros de entrada haya
-    int *descriptores;
     if ((descriptores = malloc(entradas * sizeof(int))) == NULL)
     {
         perror("malloc()");
@@ -112,7 +111,6 @@ int main(int argc, char *argv[])
         perror("malloc()");
         exit(EXIT_FAILURE);
     }
-
 
     //abrir los ficheros de entrada e inicializar los bufferes correspondientes a cada fichero de entrada
     for (int i = 0; i < entradas; i++)
@@ -144,7 +142,7 @@ int main(int argc, char *argv[])
     ssize_t *numleft = calloc(entradas, sizeof(ssize_t));
     ssize_t *numwritten = calloc(entradas, sizeof(ssize_t));
 
-    //al lio
+    // al lio
     while (!fin_all(entradas,terminado)) //sale del bucle cuando todos los ficheros están completamente leídos
     {
         for (int i = 0; i < entradas; i++)
@@ -157,7 +155,7 @@ int main(int argc, char *argv[])
                     perror("read(fdin)");
                     exit(EXIT_FAILURE);
                 }
-                if (numleft[i]==0)  // tratar los casos en los que el fichero acaba, cerrando el desriptor y marcando que el fichero ya no debe volver a leerse.
+                if (numleft[i]==0)  // tratar los casos en los que el fichero acaba, cerrando el desriptor y marcando que el fichero ya no debe volver a leerse. El fichero se vuelve a leer en bucle hasta que esto ocurra, tratando así las posibles lecturas parciales.
                 {
                     terminado[i] = 1;
                     if (close(descriptores[i]) == -1)
@@ -168,19 +166,20 @@ int main(int argc, char *argv[])
                 }
             }
         }
-        int count = 0;  // variable auxiliar que mantiene la posición por la que estamos escribiendo en el buffer de escritura
+        int count = 0;  // variable auxiliar que mantiene el número de carácteres escritos en el buffer de escritura
         //ahora las escrituras: se hacen las mezclas en el buffer de salida
+
         while(escribiendo(entradas, numleft))   //no sale de este bucle mientras quede contenido en alguno de los buffers de los ficheros
         {    
             for (int i = 0; i < entradas; i++)  //para cada buffer de lectura
             {
                 if (numleft[i] > 0)     // si queda algo que leer
                 {
-                    bufout[count] = bufin[i][numwritten[i]];
-                    numwritten[i]++;
-                    numleft[i]--;
-                    count++;
-                    if (count == bufsize)   // se ha llenado el buffer antes de terminar de leer todos los ficheros
+                    bufout[count] = bufin[i][numwritten[i]];    //se escribe en la posicion count del buffer de escritura, el carácter correspondiente a la siguiente posición del buffer que toque en la iteración del for
+                    numwritten[i]++;    // se avanza uno en dicho buffer
+                    numleft[i]--;       // y se disminuye en uno el número de caracteres restantes por leer en este buffer
+                    count++;            // por útimo, se avanza el contador de carácteres escritos en el buffer de escritura
+                    if (count == bufsize)   // se ha llenado el buffer antes de terminar de leer todos los ficheros, por lo que se procede a escribir por fdout el buffer de escritura
                     {
                         char *buf_left;
                         buf_left = bufout;
@@ -196,7 +195,6 @@ int main(int argc, char *argv[])
                             perror("write(fdin)");
                             exit(EXIT_FAILURE);
                         }
-                        assert(num_written_out == bufsize);
                     }
                 }
             }
