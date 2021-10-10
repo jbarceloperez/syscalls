@@ -12,8 +12,8 @@
             "args": [
                 /*"-n", "84",
                 "-f"*/
-                "-t", "2048",
-                "f1"
+                "-t", "4",
+                "f1", "f2"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

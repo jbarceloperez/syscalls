@@ -119,11 +119,24 @@ int main(int argc, char *argv[])
         descriptores[i] = open(argv[i+optind], O_RDONLY);
         if (descriptores[i]==-1)
         {
-            perror("open(filein)");
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Error: No se puede abrir el fichero '%s': ", argv[i+optind]);
+            perror("");
+            // exit(EXIT_FAILURE);      - no salimos de la ejecución, simplemente ignoramos este fichero
+            optind++;   //aumentamos para pasar al siguiente elemento de los argumentos, ignorando al erroneo
+            i--;        //disminuimos la i para repetir la iteración
+            entradas--; //disminuimos el numero de entradas que tiene el problema en 1, puesto que una de ellas era erronea.
+
         }
 
         bufin[i] = malloc(bufsize * sizeof(char));  // reservar la memoria para el buffer de lectura del fichero i
+    }
+
+    // El hecho de ignorar los ficheros de entrada que no existen, implica que se pueda dar la situación de que todos los ficheros 
+    // de entrada puedan ser erróneos, en cuyo caso se debe abortar la ejecución. Se debe tratar esta situación.
+    if (entradas == 0)
+    {
+        fprintf(stderr, "Error: Ningún fichero de entrada ha podido ser leído. Abortando ejecución.\n");
+        exit(EXIT_FAILURE);
     }
     
     int *terminado = calloc(entradas, sizeof(int));
@@ -131,7 +144,7 @@ int main(int argc, char *argv[])
     ssize_t *numwritten = calloc(entradas, sizeof(ssize_t));
 
     //al lio
-    while (fin_all(entradas,terminado)) //sale del bucle cuando todos los ficheros están completamente leídos
+    while (!fin_all(entradas,terminado)) //sale del bucle cuando todos los ficheros están completamente leídos
     {
         for (int i = 0; i < entradas; i++)
         {
@@ -182,17 +195,31 @@ int main(int argc, char *argv[])
                             perror("write(fdin)");
                             exit(EXIT_FAILURE);
                         }
+                        assert(num_written_out == bufsize);
                     }
                 }
             }
         }
-
-
-
+        if (count > 0)   // se ha terminado la lectura de los buffers de entrada, y no ha llenado el buffer de escritura
+        {
+            char *buf_left;
+            buf_left = bufout;
+            int num_written_out;
+            // ESCRITURAS PARCIALES -> en caso de que se escriba menos de lo que el buffer tiene,llevamos un contador de qué lleva escrito y se vuelve a escribir lo que queda.
+            while((count) > 0 && ((num_written_out = write(fdout, buf_left, count)) > 0))
+            {                                                                                               
+                count -= num_written_out;
+                buf_left += num_written_out;
+            }
+            if (num_written_out == -1)
+            {
+                perror("write(fdin)");
+                exit(EXIT_FAILURE);
+            }
+        }
+        for (int i = 0; i < entradas; i++) numwritten[i] = 0; //reseteamos el numero de carácteres escritos de cada buffer, ya que en la siguiente iteración comienza una lectura/ escritura nueva
     }
-    
-
-    
+       
     //liberar memoria
     free(numwritten);
     free(numleft);
