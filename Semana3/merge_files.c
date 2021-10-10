@@ -8,52 +8,18 @@
 #define DEFAULT_BUFSIZE 1024    // tamaño del buffer por defecto
 
 
-// void merge(int bufsize, int entradas, char *argv){
-
-//     char *bufout;
-//     char **bufin;
-
-//     // Reserva memoria dinámica para buffer de salida
-//     if ((bufout = (char *) malloc(bufsize * sizeof(char))) == NULL)
-//     {
-//         perror("malloc()");
-//         exit(EXIT_FAILURE);
-//     }
-//     //se crean tantos descriptores como ficheros de entrada haya
-//     int *descriptores = malloc(entradas * sizeof(int));
-
-//     // reservar memoria para que haya un buffer de lectura por cada fichero de entrada abierto
-//     bufin = malloc(entradas * sizeof(char*));
-
-
-//     //abrir los ficheros de entrada e inicializar los bufferes correspondientes a cada fichero de entrada
-//     for (int i = 0; i < entradas; i++)
-//     {
-//         descriptores[i] = open(argv[i+optind], O_RDONLY);
-//         if (descriptores[i]==-1)
-//         {
-//             perror("open(filein)");
-//             exit(EXIT_FAILURE);
-//         }
-
-//         bufin[i] = malloc(bufsize * sizeof(char));  // reservar la memoria para el buffer de lectura del fichero i
-//     }
-    
-    
-
-    
-//     for (int i = 0; i < entradas; i++) free(bufin[i]);  // primero libera todos los bufferes correspondientes a ficheros de entrada
-//     free(bufin);    //despues libera el array de bufferes
-//     free(descriptores); //libera la memoria del array de descriptores
-//     free(bufout);   //libera la memoria del buffer de salida
-
-// }
-
 int fin_all(int entradas, int *terminado)   //devuelve verdadero cuando todos los ficheros de lectura han sido leidos
 {
     for (int i = 0; i < entradas; i++)
         if (terminado[i] == 0) return 0;
     return 1;
+}
+
+int escribiendo(int entradas, ssize_t *numleft) // devuelve verdadero mientras quede contenido en algún buffer de lectura
+{
+    for (int i = 0; i < entradas; i++)
+        if (numleft[i] > 0) return 1;
+    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -125,9 +91,6 @@ int main(int argc, char *argv[])
     
     // EJECUCIÓN - TENEMOS AL MENOS UN FICHERO DEL CUAL LEER
     
-    //merge(bufsize, entradas, argv);
-
-
     /* Reserva memoria dinámica para buffer de salida */
     if ((bufout = (char *) malloc(bufsize * sizeof(char))) == NULL)
     {
@@ -168,13 +131,18 @@ int main(int argc, char *argv[])
     ssize_t *numwritten = calloc(entradas, sizeof(ssize_t));
 
     //al lio
-    while (fin_all(entradas,terminado))
+    while (fin_all(entradas,terminado)) //sale del bucle cuando todos los ficheros están completamente leídos
     {
         for (int i = 0; i < entradas; i++)
         {
             if(!terminado[i])   //se revisa si el fichero está ya leído al completo
             {
                 numleft[i] = read(descriptores[i], bufin[i], bufsize);  //guardamos el número de bytes leídos de este fichero, que serán los que habrá que escribir exactamente en el bufer de escritura (para tratar posibles escrituras parciales)
+                 if (numleft[i]==-1)
+                {
+                    perror("read(fdin)");
+                    exit(EXIT_FAILURE);
+                }
                 if (numleft[i]==0)  // tratar los casos en los que el fichero acaba, cerrando el desriptor y marcando que el fichero ya no debe volver a leerse.
                 {
                     terminado[i] = 1;
@@ -186,28 +154,41 @@ int main(int argc, char *argv[])
                 }
             }
         }
-        //ahora las escrituras
-        //merge_files()
+        int count = 0;  // variable auxiliar que mantiene la posición por la que estamos escribiendo en el buffer de escritura
+        //ahora las escrituras: se hacen las mezclas en el buffer de salida
+        while(escribiendo(entradas, numleft))   //no sale de este bucle mientras quede contenido en alguno de los buffers de los ficheros
+        {    
+            for (int i = 0; i < entradas; i++)  //para cada buffer de lectura
+            {
+                if (numleft[i] > 0)     // si queda algo que leer
+                {
+                    bufout[count] = bufin[i][numwritten[i]];
+                    numwritten[i]++;
+                    numleft[i]--;
+                    count++;
+                    if (count == bufsize)   // se ha llenado el buffer antes de terminar de leer todos los ficheros
+                    {
+                        char *buf_left;
+                        buf_left = bufout;
+                        int num_written_out;
+                        // ESCRITURAS PARCIALES -> en caso de que se escriba menos de lo que el buffer tiene,llevamos un contador de qué lleva escrito y se vuelve a escribir lo que queda.
+                        while((count) > 0 && ((num_written_out = write(fdout, buf_left, count)) > 0))
+                        {                                                                                               
+                            count -= num_written_out;
+                            buf_left += num_written_out;
+                        }
+                        if (num_written_out == -1)
+                        {
+                            perror("write(fdin)");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+                }
+            }
+        }
 
 
-        // for (int i = 0; i < entradas; i++)  //primero se hace una lectura de tamaño bufsize de cada fichero si es necesario
-        // {
-        //     if(!escribiendo[i]) // si escribiendo es 1 es que aun queda información en el buffer de la lectura anterior
-        //     {   //se almacena el no. de bytes leidos para cada fichero
-        //         numread[i] = read(descriptores[i], bufin[i], bufsize);
-        //         escribiendo[i] = 1;
-        //         if (numread[i]==-1)
-        //         {
-        //             perror("read(fdin)");
-        //             exit(EXIT_FAILURE);
-        //         }
-        //     }
-        // }
 
-        // for (int i = 0; i < entradas; i++)  //despues escribimos un byte de cada fichero en la salida
-        // {
-
-        // }
     }
     
 
