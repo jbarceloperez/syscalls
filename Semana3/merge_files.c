@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
     char **bufin;
 
     if (argc < 2){ // si no hay argumentos
+        fprintf(stderr, "No hay ficheros de entrada\n");
         fprintf(stderr, "Uso: %s [-t BUFSIZE] [-o FILEOUT] FILEIN1 [FILEIN2 ... FILEIN16]\nNo admite lectura de la entrada estandar.\n -t BUFSIZE  Tamaño de buffer donde 1 <= BUFSIZE <= 128MB\n -o FILEOUT  Usa FILEOUT en lugar de la salida estandar\n", argv[0]);
         exit(EXIT_FAILURE);
     }
