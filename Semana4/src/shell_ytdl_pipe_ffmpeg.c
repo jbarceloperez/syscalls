@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-/*  Ejemplo: shell_ytdl_pipe_ffmeg -u YTURL -f FICHERO */
+/*  Ejemplo: shell_ytdl_pipe_ffmeg -u YTURL -f FICHEROa */
 
 void print_help(char* program_name)
 {
