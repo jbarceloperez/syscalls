@@ -10,10 +10,7 @@
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [
-                /*"-n", "84",
-                "-f"*/
-                "-t", "1",
-                "f1", "f2"
+                
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
