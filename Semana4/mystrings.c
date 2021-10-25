@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <ctype.h>      // para la función isprint()
-#include <string.h>     // para el strcpm()
 
 
 #define DEFAULT_BUFSIZE 1024    // tamaño del buffer por defecto
@@ -40,12 +39,13 @@ int main(int argc, char *argv[])
     char *bufout;
     fd = STDIN_FILENO;
     
-    if (0) // no hay datos en la entrada estándar ¿cómo comprobar si la entrada estándar tiene algún dato, sabiendo que viene de una tubería?
-    {
-        fprintf(stderr, "Error: La entrada estándar está vacía.\n");
-        fprintf(stderr, "USO: %s [-t BUFSIZE] [-n MINLENGTH]\nLee de la entrada estándar el flujo de bytes recibido y escribe en la salida estándar las cadenas compuestas por caracteres imprimibles incluyendo espacios, tabuladores y saltos de línea, que tengan una longitud mayor o igual a un tamaño dado.\n  -t BUFSIZE     Tamaño de buffer donde MINLENGTH <= BUFSIZE <= 1MB (por defecto 1024).\n  -n MINLENGTH   Longitud mínima de la cadena. Mayor que 0 y menor que 256 (por defecto 4).\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
+    //  ESTO ES PROBLEMA DEL PADRE, QUE DEBE ASEGURAR QUE LLEGAN DATOS POR ENTRADA ESTANDAR DEL HIJO
+    // if (0) // no hay datos en la entrada estándar ¿cómo comprobar si la entrada estándar tiene algún dato, sabiendo que viene de una tubería?
+    // {
+    //     fprintf(stderr, "Error: La entrada estándar está vacía.\n");
+    //     fprintf(stderr, "USO: %s [-t BUFSIZE] [-n MINLENGTH]\nLee de la entrada estándar el flujo de bytes recibido y escribe en la salida estándar las cadenas compuestas por caracteres imprimibles incluyendo espacios, tabuladores y saltos de línea, que tengan una longitud mayor o igual a un tamaño dado.\n  -t BUFSIZE     Tamaño de buffer donde MINLENGTH <= BUFSIZE <= 1MB (por defecto 1024).\n  -n MINLENGTH   Longitud mínima de la cadena. Mayor que 0 y menor que 256 (por defecto 4).\n", argv[0]);
+    //     exit(EXIT_FAILURE);
+    // }
 
     optind = 1;
     while ((opt = getopt(argc, argv, "t:n:")) != -1)
@@ -77,8 +77,6 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    //abrir descriptores no hace falta porque se usa la saldia estandar
-
     // ejecucion
 
     ssize_t num_read, num_left, num_written; 
@@ -105,7 +103,7 @@ int main(int argc, char *argv[])
                 bufout[count] = bufin[i];   //se añade al buffer de escritura 
                 count++;
                 if (count == minlength) imprimible = 1; // marcar la entrada como imprimible
-                if (count == bufsize) escribir(&count, bufout); // si se ha lenado el buffer de escritura, escribe por salida estandar
+                if (count == bufsize) escribir(&count, bufout); // si se ha llenado el buffer de escritura, escribe por salida estandar
             }
         }
     }
