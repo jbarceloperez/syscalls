@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    //si no hay arvhivos de entrada error
+    //si no hay archivos de entrada error
     if (argc == optind)
     {
         fprintf(stderr, "Error: No hay ficheros de entrada.\n");

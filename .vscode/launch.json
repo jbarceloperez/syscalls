@@ -9,8 +9,8 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": [
-                
+            "args": [//"-t", "4",
+                    //"-n", "4"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

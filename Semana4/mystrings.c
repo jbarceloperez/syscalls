@@ -9,14 +9,14 @@
 
 
 #define DEFAULT_BUFSIZE 1024    // tamaño del buffer por defecto
-#define DEFAUTL_MINLENGTH 4     // longitud minima por defecto
+#define DEFAULT_MINLENGTH 4     // longitud minima por defecto
 
-void escribir(int count, char *buf)
+void escribir(int *count, char *buf)
 {
     size_t num_left, num_written;
     char *buf_left;
 
-    num_left = count;
+    num_left = *count;
     buf_left = buf;
     //escrituras
     while((num_left) > 0 && ((num_written = write(STDOUT_FILENO, buf_left, num_left)) > 0))
@@ -29,18 +29,23 @@ void escribir(int count, char *buf)
         perror("write(fdin)");
         exit(EXIT_FAILURE);
     }
+    *count = 0;
 }
 
 
 int main(int argc, char *argv[])
 {
-    int opt, bufsize = DEFAULT_BUFSIZE, minlength = DEFAUTL_MINLENGTH;
-
-    // if (argc<2) // no hay argumentos
-    // {
-    //     fprintf(stderr, "USO: %s [-t BUFSIZE] [-n MINLENGTH]\nLee de la entrada estándar el flujo de bytes recibido y escribe en la salida estándar las cadenas compuestas por caracteres imprimibles incluyendo espacios, tabuladores y saltos de línea, que tengan una longitud mayor o igual a un tamaño dado.\n  -t BUFSIZE     Tamaño de buffer donde MINLENGTH <= BUFSIZE <= 1MB (por defecto 1024).\n  -n MINLENGTH   Longitud mínima de la cadena. Mayor que 0 y menor que 256 (por defecto 4).\n", argv[0]);
-    //     exit(EXIT_FAILURE);
-    // }
+    int opt, fd, bufsize = DEFAULT_BUFSIZE, minlength = DEFAULT_MINLENGTH, imprimible = 0;  // la variable imprimible se pone a verdadero cuando se alcanza la longitud mínima y, por tanto, se debe escribir todo lo que haya en el buffer de escritura
+    char *bufin;
+    char *bufout;
+    fd = STDIN_FILENO;
+    
+    if (0) // no hay datos en la entrada estándar ¿cómo comprobar si la entrada estándar tiene algún dato, sabiendo que viene de una tubería?
+    {
+        fprintf(stderr, "Error: La entrada estándar está vacía.\n");
+        fprintf(stderr, "USO: %s [-t BUFSIZE] [-n MINLENGTH]\nLee de la entrada estándar el flujo de bytes recibido y escribe en la salida estándar las cadenas compuestas por caracteres imprimibles incluyendo espacios, tabuladores y saltos de línea, que tengan una longitud mayor o igual a un tamaño dado.\n  -t BUFSIZE     Tamaño de buffer donde MINLENGTH <= BUFSIZE <= 1MB (por defecto 1024).\n  -n MINLENGTH   Longitud mínima de la cadena. Mayor que 0 y menor que 256 (por defecto 4).\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
 
     optind = 1;
     while ((opt = getopt(argc, argv, "t:n:")) != -1)
@@ -76,13 +81,21 @@ int main(int argc, char *argv[])
 
     // ejecucion
 
-    ssize_t num_read, num_left, num_written;
-    char *bufin = malloc(bufsize * sizeof(char));
-    char *bufout = malloc(bufsize * sizeof(char));
+    ssize_t num_read, num_left, num_written; 
+    if ((bufin = malloc(bufsize * sizeof(char))) == NULL)
+    {
+        perror("malloc()");
+        exit(EXIT_FAILURE);
+    }
+    if ((bufout = malloc(bufsize * sizeof(char))) == NULL)
+    {
+        perror("malloc()");
+        exit(EXIT_FAILURE);
+    }
     char *buf_left;
     int count = 0;  //lleva la cuenta de cuanto se ha escrito en el buffer de escritura
 
-    int fd = open("in", O_RDONLY);//DEBUG
+    // fd = open("in", O_RDONLY);//DEBUG
     while ((num_read = read(fd, bufin, bufsize)) > 0)
     {
         for (int i = 0; i < num_read; i++)
@@ -91,11 +104,8 @@ int main(int argc, char *argv[])
             {
                 bufout[count] = bufin[i];   //se añade al buffer de escritura 
                 count++;
-                if (count == bufsize)   // si se ha lenado el buffer de escritura, escribe por salida estandar
-                {
-                    escribir(count, bufout);
-                    count = 0;
-                }
+                if (count == minlength) imprimible = 1; // marcar la entrada como imprimible
+                if (count == bufsize) escribir(&count, bufout); // si se ha lenado el buffer de escritura, escribe por salida estandar
             }
         }
     }
@@ -106,8 +116,8 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    //en caso de que no se haya llenado el buffer,comprobar que la longitud de caracteres imprimibles es del tamaño necesario como para escribirse por salida estandar.
-    if (count >= minlength) escribir(count, bufout);
+    //en caso de que no se haya llenado el buffer,comprobar que la longitud de caracteres imprimibles es del tamaño necesario como para escribirse por salida estandar y de ser así, escribir todo lo que haya en el buffer.
+    if (imprimible && count > 0) escribir(&count, bufout);
 
     //liberar memoria
     free(bufin);
