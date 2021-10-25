@@ -170,5 +170,6 @@ int main(int argc, char *argv[])
     free(bufout);
     free(descriptores);
     free(bufin);
+
     return EXIT_SUCCESS;
 }
