@@ -9,8 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
-            "args": ["-t", "20",
-                    "-n", "4"
+            "args": ["-i", "fnoexiste,f2,f3,f4", "fo1", "fo2"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
